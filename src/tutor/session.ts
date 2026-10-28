@@ -1,7 +1,11 @@
 import { PiTutorProvider } from "./provider";
 import { TutorContext, TutorMessage, TutorProvider, TutorResponse } from "./types";
 
+let nextSessionId = 0;
+
 export class TutorSession {
+  readonly id = String(++nextSessionId);
+  private expandedHistory = new Set<number>();
   private conversations = new Map<number, TutorMessage[]>();
   private provider?: Promise<TutorProvider>;
   private disposed = false;
@@ -34,6 +38,35 @@ export class TutorSession {
     return this.conversations.get(step) ?? [];
   }
 
+  private latestExchangeStart(step: number): number {
+    const messages = this.getMessages(step);
+    for (let index = messages.length - 1; index >= 0; index--) {
+      if (messages[index].role === "user") return index;
+    }
+    return 0;
+  }
+
+  getEarlierMessageCount(step: number): number {
+    return this.getMessages(step).slice(0, this.latestExchangeStart(step))
+      .filter(message => message.content).length;
+  }
+
+  isHistoryExpanded(step: number): boolean {
+    return this.expandedHistory.has(step);
+  }
+
+  getVisibleMessages(step: number): TutorMessage[] {
+    const messages = this.getMessages(step);
+    return this.isHistoryExpanded(step) ? messages : messages.slice(this.latestExchangeStart(step));
+  }
+
+  toggleHistory(step: number): void {
+    if (this.disposed || !this.getEarlierMessageCount(step)) return;
+    if (this.expandedHistory.has(step)) this.expandedHistory.delete(step);
+    else this.expandedHistory.add(step);
+    this.changed(step);
+  }
+
   appendMessage(step: number, message: TutorMessage): void {
     this.conversations.set(step, [...this.getMessages(step), message]);
   }
@@ -46,6 +79,8 @@ export class TutorSession {
     const assistant: TutorMessage = { role: "assistant", content: "" };
     const pending = { step, status: "Initializing tutor…" };
     this.pending = pending;
+    // New submissions return to the compact view; this does not alter agent history.
+    this.expandedHistory.delete(step);
     // Publish before any await: the user's message is visible immediately, even
     // while loading the SDK or waiting for the first model token.
     this.appendMessage(step, { role: "user", content: context.userMessage });
@@ -85,6 +120,7 @@ export class TutorSession {
   }
 
   clear(): void {
+    this.expandedHistory.clear();
     this.conversations.clear();
   }
 

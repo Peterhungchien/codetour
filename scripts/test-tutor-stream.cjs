@@ -129,6 +129,69 @@ module.exports = async (output, context) => {
   assert.equal(live.getMessages(0)[1].content, "Final **answer**");
   detach(); detachOther(); live.dispose();
 
+  // History is a view filter only: full messages stay in the session.
+  let finishThird;
+  const thirdGate = new Promise(resolve => { finishThird = resolve; });
+  let startedThird;
+  const thirdStarted = new Promise(resolve => { startedThird = resolve; });
+  const history = new TutorSession("/workspace", async () => ({
+    async respond(ctx, update) {
+      const answer = "**Reply " + ctx.userMessage + "**";
+      update({ type: "text", text: answer });
+      if (ctx.userMessage === "third") {
+        startedThird();
+        await thirdGate;
+      }
+      return { message: answer };
+    }, dispose() {}
+  }));
+  const historyThread = { comments: [] };
+  const detachHistory = bindTutorComments(history, 0, historyThread, tourComment, () => true);
+  await history.respond({ ...context, userMessage: "first" });
+  assert.equal(historyThread.comments.length, 3, "no toggle for a single exchange");
+  await history.respond({ ...context, userMessage: "second" });
+  assert.equal(history.getMessages(0).length, 4);
+  assert.equal(history.getVisibleMessages(0).length, 2);
+  assert.equal(historyThread.comments.length, 4, "step, toggle, latest user and reply");
+  assert.equal(historyThread.comments[2].body.value, "second");
+  assert.equal(historyThread.comments[3].body.value, "**Reply second**");
+  const historyLink = historyThread.comments[1].body;
+  assert.match(historyLink.value, /Show earlier messages \(2\)/);
+  assert.equal(historyLink.isTrusted, true, "only our generated toggle is trusted");
+  const args = historyLink.value.match(/toggleTutorHistory\?([^)]*)/)[1];
+  assert.deepEqual(JSON.parse(decodeURIComponent(args)), [history.id, 0]);
+  assert.equal(historyThread.comments[2].body.isTrusted, false);
+  history.toggleHistory(0);
+  assert.equal(historyThread.comments.length, 6);
+  assert.match(historyThread.comments[1].body.value, /Hide history/);
+  assert.equal(historyThread.comments[2].body.value, "first");
+  assert.equal(history.isHistoryExpanded(1), false, "expansion is scoped to a step");
+  detachHistory();
+  const revisited = { comments: [] };
+  const detachRevisited = bindTutorComments(history, 0, revisited, tourComment, () => true);
+  assert.equal(revisited.comments.length, 6, "expanded choice survives a thread rebind");
+  history.toggleHistory(0);
+  assert.equal(revisited.comments.length, 4);
+  history.toggleHistory(0);
+  const third = history.respond({ ...context, userMessage: "third" });
+  assert.equal(history.isHistoryExpanded(0), false, "a new message returns to compact mode");
+  assert.equal(revisited.comments[2].body.value, "third", "old answer is not paired with a new user");
+  assert.equal(revisited.comments[3].author.name, "Tutor activity");
+  assert.equal(history.getEarlierMessageCount(0), 4);
+  await thirdStarted;
+  history.toggleHistory(0);
+  assert.equal(history.getVisibleMessages(0).length, 6);
+  assert.match(revisited.comments[revisited.comments.length - 1].body.value, /Initializing/);
+  history.toggleHistory(0);
+  finishThird();
+  await third;
+  assert.equal(revisited.comments.length, 4);
+  assert.equal(history.getMessages(0).length, 6, "hiding must never delete messages");
+  assert.equal(revisited.comments[3].body.value, "**Reply third**");
+  detachRevisited();
+  history.dispose();
+  assert.equal(history.isHistoryExpanded(0), false);
+
   // Failed responses retain the submitted message and partial Markdown.
   const failed = new TutorSession("/workspace", async () => ({
     async respond(_context, update) {

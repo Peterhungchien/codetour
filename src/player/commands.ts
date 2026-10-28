@@ -292,6 +292,17 @@ export function registerPlayerCommands() {
   );
 
   vscode.commands.registerCommand(
+    `${EXTENSION_NAME}.toggleTutorHistory`,
+    (sessionId: string, step: number) => {
+      const activeTour = store.activeTour;
+      // Ignore links from an old tour or a no-longer-visible step.
+      if (!activeTour || store.isRecording || activeTour.tutorSession.id !== sessionId ||
+          activeTour.step !== step) return;
+      activeTour.tutorSession.toggleHistory(step);
+    }
+  );
+
+  vscode.commands.registerCommand(
     `${EXTENSION_NAME}.sendTutorReply`,
     async (reply: vscode.CommentReply) => {
       const activeTour = store.activeTour;

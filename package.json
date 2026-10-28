@@ -233,10 +233,18 @@
         "command": "codetour.sendTutorReply",
         "title": "Send",
         "enablement": "!commentIsEmpty"
+      },
+      {
+        "command": "codetour.toggleTutorHistory",
+        "title": "Show/Hide Tutor History"
       }
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "codetour.toggleTutorHistory",
+          "when": "false"
+        },
         {
           "command": "codetour.addContentStep",
           "when": "codetour:inTour && codetour:recording && codetour:canEditTour"

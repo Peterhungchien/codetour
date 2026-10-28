@@ -1,4 +1,5 @@
 import { Comment, CommentMode, CommentThread, MarkdownString } from "vscode";
+import { EXTENSION_NAME } from "../constants";
 import { TutorSession } from "./session";
 import { TutorMessage } from "./types";
 
@@ -20,6 +21,12 @@ export function bindTutorComments(
   isCurrent: () => boolean
 ): () => void {
   const comments = new Map<TutorMessage, Comment>();
+  const historyControl: Comment = {
+    body: "",
+    author: { name: "Conversation history" },
+    mode: CommentMode.Preview,
+    contextValue: "codetour.tutor.history"
+  };
   const activity: Comment = {
     body: "",
     author: { name: "Tutor activity" },
@@ -30,13 +37,14 @@ export function bindTutorComments(
   let timer: ReturnType<typeof setTimeout> | undefined;
   let lastCount = -1;
   let lastStatus: string | undefined;
+  let lastExpanded = false;
 
   const render = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
     if (disposed || !isCurrent()) return;
     const messages = session.getMessages(step);
-    const visible = messages.filter(message => message.content).map(message => {
+    const visible = session.getVisibleMessages(step).filter(message => message.content).map(message => {
       let comment = comments.get(message);
       if (!comment) {
         comment = {
@@ -57,15 +65,28 @@ export function bindTutorComments(
       activity.body = body;
       visible.push(activity);
     }
-    thread.comments = [tourComment, ...visible];
+    const earlierCount = session.getEarlierMessageCount(step);
+    const expanded = session.isHistoryExpanded(step);
+    if (earlierCount) {
+      const label = expanded ? "Hide history" : `Show earlier messages (${earlierCount})`;
+      const args = encodeURIComponent(JSON.stringify([session.id, step]));
+      const body = new MarkdownString(`[${label}](command:${EXTENSION_NAME}.toggleTutorHistory?${args})`);
+      // This control contains only our fixed command and generated label/args.
+      // User/agent Markdown continues to be explicitly untrusted.
+      body.isTrusted = true;
+      historyControl.body = body;
+    }
+    thread.comments = [tourComment, ...(earlierCount ? [historyControl] : []), ...visible];
     lastCount = messages.length;
     lastStatus = status;
+    lastExpanded = expanded;
   };
   const unsubscribe = session.subscribe(changedStep => {
     if (changedStep !== step || disposed || !isCurrent()) return;
     // Submissions, tool transitions and completion render synchronously. Only
     // token bursts are coalesced to avoid flooding VS Code's extension IPC.
-    if (session.getMessages(step).length !== lastCount ||
+    if (session.isHistoryExpanded(step) !== lastExpanded ||
+        session.getMessages(step).length !== lastCount ||
         session.getStatus(step) !== lastStatus || !session.getStatus(step)) render();
     else if (!timer) timer = setTimeout(render, 50);
   });

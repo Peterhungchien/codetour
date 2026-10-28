@@ -327,6 +327,13 @@ blocks, lists, emphasis, and ordinary links. Conversation Markdown cannot execut
 command links or enable HTML. Tool output and private model reasoning are not
 shown in the activity comment.
 
+By default, only the latest user message and its tutor response are shown, along
+with the tour description and any current tool activity. Click **Show earlier
+messages (N)** to reveal older exchanges, or **Hide history** to return to the
+compact view. This only filters the UI; the agent keeps the full conversation.
+Expansion is remembered per step while the tour is active. Sending another
+message returns that step to the compact view immediately, before the reply starts.
+
 Responses stay attached to their original step. Navigate away and return to see
 the latest partial or completed reply. One request runs at a time per tour;
 ending or replacing the tour disposes its agent session. Failed responses retain
