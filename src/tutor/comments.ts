@@ -86,8 +86,8 @@ export function bindTutorComments(
     // Submissions, tool transitions and completion render synchronously. Only
     // token bursts are coalesced to avoid flooding VS Code's extension IPC.
     if (session.isHistoryExpanded(step) !== lastExpanded ||
-        session.getMessages(step).length !== lastCount ||
-        session.getStatus(step) !== lastStatus || !session.getStatus(step)) render();
+      session.getMessages(step).length !== lastCount ||
+      session.getStatus(step) !== lastStatus || !session.getStatus(step)) render();
     else if (!timer) timer = setTimeout(render, 50);
   });
   render();
