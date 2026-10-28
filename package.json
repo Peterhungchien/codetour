@@ -697,6 +697,7 @@
     "build": "webpack --mode production",
     "test": "node scripts/test-tutor.cjs",
     "typecheck": "tsc --noEmit --skipLibCheck",
+    "test:vscode": "node scripts/run-vscode-render-test.cjs",
     "vscode:prepublish": "npm run build",
     "watch": "webpack --mode development --watch",
     "package": "vsce package"

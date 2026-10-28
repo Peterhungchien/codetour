@@ -348,6 +348,13 @@ Developer checks: `npm test`, `npm run typecheck`, and `npm run build`.
 The typecheck uses the repository's pinned compiler and skips legacy dependency
 and proposed-API declaration conflicts; application source is still checked.
 
+`npm run test:vscode` additionally launches the installed VS Code in an isolated
+profile and drives the actual comment UI, including typing and clicking **Send**.
+On headless Linux, run `xvfb-run -a npm run test:vscode`. Set `CODE_EXECUTABLE` if
+VS Code is not available as `code`. This test uses a deterministic provider and
+never sends an API request. It checks the rendered DOM, not just message state,
+including the Show/Hide history links during streaming and after navigation.
+
 ## Maintaining Tours
 
 In order to ensure that your tours stay up-to-date as your codebase evolves, you can install one of the following tasks as part of your CI pipeline, in order to detect "tour drift" in response to PRs/commits/etc.
