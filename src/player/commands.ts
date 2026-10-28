@@ -290,4 +290,33 @@ export function registerPlayerCommands() {
   vscode.commands.registerCommand(`${EXTENSION_NAME}.resetProgress`, () =>
     progress.reset()
   );
+
+  vscode.commands.registerCommand(
+    `${EXTENSION_NAME}.sendTutorReply`,
+    async (reply: vscode.CommentReply) => {
+      const activeTour = store.activeTour;
+      if (!activeTour || store.isRecording || reply.thread !== activeTour.thread || !reply.text.trim()) return;
+      if (!vscode.workspace.isTrusted) {
+        vscode.window.showErrorMessage("Trust this workspace before using the tutor.");
+        return;
+      }
+      const stepIndex = activeTour.step;
+      const step = activeTour.tour.steps[stepIndex];
+      if (!step) return;
+      // Return from Send immediately so VS Code clears the reply editor while
+      // the session publishes the user message, streamed text and tool status.
+      void activeTour.tutorSession.respond({
+        userMessage: reply.text,
+        workspaceRoot: activeTour.workspaceRoot?.fsPath || "",
+        stepIndex,
+        stepDescription: step.description,
+        file: step.file,
+        line: step.line
+      }).catch(error => {
+        if (store.activeTour === activeTour) {
+          vscode.window.showErrorMessage(`Tutor: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      });
+    }
+  );
 }

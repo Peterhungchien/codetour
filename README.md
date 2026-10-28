@@ -315,6 +315,32 @@ At any time, you can end the current code tour by means of one of the following 
 - Click the stop button next to the active tour in the `CodeTour` tree
 - Running the `CodeTour: End Tour` command in the command palette
 
+## Inline Tutor
+
+In a trusted local workspace, reply to a tour step and click **Send**. Your message
+appears immediately; the tutor's response streams into the same thread. A temporary
+**Tutor activity** comment shows initialization, thinking, or a brief current tool
+call such as `read: src/main.ts`. It disappears when the response finishes.
+
+Both your messages and tutor replies render Markdown, including fenced code
+blocks, lists, emphasis, and ordinary links. Conversation Markdown cannot execute
+command links or enable HTML. Tool output and private model reasoning are not
+shown in the activity comment.
+
+Responses stay attached to their original step. Navigate away and return to see
+the latest partial or completed reply. One request runs at a time per tour;
+ending or replacing the tour disposes its agent session. Failed responses retain
+your message and any partial answer, followed by an inline error.
+
+Configure `~/.config/codetour/tutor.json` using
+[`tutor.config.example.json`](tutor.config.example.json).
+The tutor requires a desktop extension host running Node.js 22.19 or newer.
+Normal tour playback does not require agent credentials.
+
+Developer checks: `npm test`, `npm run typecheck`, and `npm run build`.
+The typecheck uses the repository's pinned compiler and skips legacy dependency
+and proposed-API declaration conflicts; application source is still checked.
+
 ## Maintaining Tours
 
 In order to ensure that your tours stay up-to-date as your codebase evolves, you can install one of the following tasks as part of your CI pipeline, in order to detect "tour drift" in response to PRs/commits/etc.

@@ -3,6 +3,7 @@
 
 import { observable } from "mobx";
 import { CommentThread, Uri } from "vscode";
+import { TutorSession } from "../tutor/session";
 
 export interface CodeTourStepPosition {
   line: number;
@@ -67,6 +68,16 @@ export interface ActiveTour {
   // then the active workspace (e.g. a
   // GistPad-managed repo).
   tours?: CodeTour[];
+  tutorSession: TutorSession;
+}
+
+// VS Code exposes CommentThread as a plain object with accessor properties.
+// Deep MobX conversion wraps that object and breaks identity with CommentReply.thread.
+export function createActiveTour(activeTour: ActiveTour): ActiveTour {
+  return observable.object(activeTour, {
+    thread: observable.ref,
+    tutorSession: observable.ref
+  });
 }
 
 type CodeTourProgress = [string, number[]];

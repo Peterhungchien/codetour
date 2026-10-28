@@ -23,6 +23,7 @@ import {
 } from "vscode";
 import { SMALL_ICON_URL } from "../constants";
 import { CodeTour, store } from "../store";
+import { bindTutorComments } from "../tutor/comments";
 import { initializeStorage } from "../store/storage";
 import {
   getActiveStepMarker,
@@ -134,6 +135,8 @@ export class CodeTourComment implements Comment {
 }
 
 let controller: CommentController | null;
+let unbindTutorComments: (() => void) | undefined;
+let renderGeneration = 0;
 
 export async function focusPlayer() {
   const currentThread = store.activeTour!.thread!;
@@ -141,6 +144,9 @@ export async function focusPlayer() {
 }
 
 export async function startPlayer() {
+  ++renderGeneration;
+  unbindTutorComments?.();
+  unbindTutorComments = undefined;
   if (controller) {
     controller.dispose();
   }
@@ -164,6 +170,9 @@ export async function startPlayer() {
 }
 
 export async function stopPlayer() {
+  ++renderGeneration;
+  unbindTutorComments?.();
+  unbindTutorComments = undefined;
   if (store.activeTour?.thread) {
     store.activeTour!.thread.dispose();
     store.activeTour!.thread = null;
@@ -229,6 +238,13 @@ function getNextTour(): CodeTour | undefined {
 }
 
 async function renderCurrentStep() {
+  const activeTour = store.activeTour;
+  if (!activeTour) return;
+  const generation = ++renderGeneration;
+  const isCurrent = () => store.activeTour === activeTour &&
+    generation === renderGeneration;
+  unbindTutorComments?.();
+  unbindTutorComments = undefined;
   if (store.activeTour!.thread) {
     store.activeTour!.thread.dispose();
   }
@@ -243,6 +259,7 @@ async function renderCurrentStep() {
 
   const workspaceRoot = store.activeTour?.workspaceRoot;
   const uri = await getStepFileUri(step, workspaceRoot, currentTour.ref);
+  if (!isCurrent()) return;
 
   let line = step.line
     ? step.line - 1
@@ -254,6 +271,7 @@ async function renderCurrentStep() {
     const stepPattern = step.pattern || getActiveStepMarker();
     if (stepPattern) {
       const document = await workspace.openTextDocument(uri);
+      if (!isCurrent()) return;
       const match = document.getText().match(new RegExp(stepPattern, "m"));
       if (match) {
         line = document.positionAt(match.index!).line;
@@ -345,9 +363,12 @@ async function renderCurrentStep() {
     mode
   );
 
-  // @ts-ignore
-  store.activeTour!.thread.canReply = false;
-  store.activeTour!.thread.comments = [comment];
+  const thread = activeTour.thread!;
+  thread.canReply = !store.isRecording;
+  unbindTutorComments = bindTutorComments(
+    activeTour.tutorSession, currentStep, thread, comment,
+    () => isCurrent() && activeTour.thread === thread && activeTour.step === currentStep
+  );
 
   const contextValues = [];
   if (hasPreviousStep) {
@@ -378,6 +399,7 @@ async function renderCurrentStep() {
   }
 
   await showDocument(uri, range, selection);
+  if (!isCurrent()) return;
 
   if (step.directory) {
     const directoryUri = getFileUri(step.directory, workspaceRoot);

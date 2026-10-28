@@ -3,3 +3,6 @@ node_modules
 .vscode-test/
 *.vsix
 .DS_Store
+
+# Local tutor secrets (the default config lives outside the repository)
+tutor.config.json

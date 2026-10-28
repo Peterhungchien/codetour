@@ -1,0 +1,5 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "apiKey": "YOUR_API_KEY"
+}

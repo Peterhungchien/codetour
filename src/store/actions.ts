@@ -9,9 +9,10 @@ import {
   window,
   workspace
 } from "vscode";
-import { CodeTour, store } from ".";
+import { CodeTour, createActiveTour, store } from ".";
 import { EXTENSION_NAME, FS_SCHEME, FS_SCHEME_CONTENT } from "../constants";
 import { startPlayer, stopPlayer } from "../player";
+import { TutorSession } from "../tutor/session";
 import {
   getStepFileUri,
   getWorkspaceKey,
@@ -55,13 +56,15 @@ export function startCodeTour(
   }
 
   const step = stepNumber ? stepNumber : tour.steps.length ? 0 : -1;
-  store.activeTour = {
+  store.activeTour?.tutorSession.dispose();
+  store.activeTour = createActiveTour({
     tour,
     step,
     workspaceRoot,
     thread: null,
-    tours
-  };
+    tours,
+    tutorSession: new TutorSession(workspaceRoot?.scheme === "file" ? workspaceRoot.fsPath : undefined)
+  });
 
   commands.executeCommand("setContext", IN_TOUR_KEY, true);
   commands.executeCommand("setContext", CAN_EDIT_TOUR_KEY, canEditTour);
@@ -117,6 +120,7 @@ export async function endCurrentCodeTour(fireEvent: boolean = true) {
   }
 
   stopPlayer();
+  store.activeTour?.tutorSession.dispose();
 
   store.activeTour = null;
   commands.executeCommand("setContext", IN_TOUR_KEY, false);

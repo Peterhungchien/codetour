@@ -1,12 +1,13 @@
 .tours/**
 .vscode/**
-node_modules/**
 src/**
 .gitignore
 .space
-package.lock.json
+package-lock.json
 tsconfig.json
 webpack.config.js
+scripts/**
+tutor.config.json
 **/*.vsix
 .git/**
 .github/**

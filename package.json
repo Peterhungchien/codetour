@@ -228,6 +228,11 @@
         "command": "codetour.viewNotebook",
         "title": "View Notebook",
         "category": "CodeTour"
+      },
+      {
+        "command": "codetour.sendTutorReply",
+        "title": "Send",
+        "enablement": "!commentIsEmpty"
       }
     ],
     "menus": {
@@ -385,6 +390,11 @@
           "command": "codetour.addTourStep",
           "group": "inline",
           "when": "commentController == codetour && commentThreadIsEmpty"
+        },
+        {
+          "command": "codetour.sendTutorReply",
+          "group": "inline",
+          "when": "commentController == codetour && !commentThreadIsEmpty && !codetour:recording"
         }
       ],
       "comments/comment/title": [
@@ -652,6 +662,7 @@
     ]
   },
   "dependencies": {
+    "@earendil-works/pi-coding-agent": "1.4.0",
     "@types/jexl": "^2.2.0",
     "axios": "^0.21.4",
     "jexl": "^2.3.0",
@@ -676,6 +687,8 @@
   },
   "scripts": {
     "build": "webpack --mode production",
+    "test": "node scripts/test-tutor.cjs",
+    "typecheck": "tsc --noEmit --skipLibCheck",
     "vscode:prepublish": "npm run build",
     "watch": "webpack --mode development --watch",
     "package": "vsce package"
